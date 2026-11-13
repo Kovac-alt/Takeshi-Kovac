@@ -1,0 +1,168 @@
+/* Layout: phone-first single column (max 640px) under a compact sticky header, with a fixed
+   bottom tab bar. From 960px up the tab bar becomes a left rail and the content widens.
+
+   Color: cool iron neutrals, with the four bumper-plate colors doing semantic work:
+   yellow (15) = primary action and personal records, green (10) = done,
+   blue (20) = information and chart series, red (25) = destructive and high effort.
+
+   Type: Barlow Condensed for headings, labels and every number you read mid-set;
+   Barlow for running text. */
+
+:root {
+  /* neutrals */
+  --bg: #eef0f2;
+  --surface: #ffffff;
+  --surface-2: #e3e7eb;
+  --surface-3: #d3d9df;
+  --ink: #12161b;
+  --ink-2: #47515c;
+  --ink-3: #6f7a86;
+  --line: #d2d8de;
+  --line-strong: #aeb7c1;
+  --overlay: rgba(14, 17, 20, 0.5);
+
+  /* plates */
+  --accent: #f7b500;
+  --accent-strong: #e0a300;
+  --on-accent: #17130a;
+  --accent-text: #7d5200;
+  --accent-soft: #fdf0c6;
+  --green: #1a7f45;
+  --green-soft: #d9f0e2;
+  --on-green: #ffffff;
+  --blue: #1d5bbf;
+  --blue-soft: #dde9fb;
+  --red: #c42d25;
+  --red-soft: #fbdedb;
+  --on-red: #ffffff;
+
+  /* chart series, in order of use */
+  --series-1: #1d5bbf;
+  --series-2: #c98a00;
+  --series-3: #1a7f45;
+  --series-4: #c42d25;
+  --chart-grid: #dde2e7;
+  --chart-axis: #6f7a86;
+
+  --focus: #1d5bbf;
+  --shadow-1: 0 1px 2px rgba(18, 22, 27, 0.08);
+  --shadow-2: 0 8px 28px rgba(18, 22, 27, 0.18);
+
+  /* type */
+  --font-display: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-h3: 1.25rem;
+  --fs-h2: 1.5rem;
+  --fs-h1: 2rem;
+  --fs-num-lg: 1.75rem;
+  --fs-num-xl: 3rem;
+  --lh-tight: 1.1;
+  --lh-body: 1.45;
+  --track-label: 0.06em;
+
+  /* space, shape, motion */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-sheet: 18px;
+  --r-pill: 999px;
+  --tap: 48px;
+  --content-max: 640px;
+  --content-max-wide: 1040px;
+  --tabbar-h: 60px;
+  --header-h: 52px;
+  --rail-w: 88px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 180ms;
+
+  --z-header: 20;
+  --z-tabbar: 30;
+  --z-timer: 35;
+  --z-sheet: 50;
+  --z-dialog: 60;
+  --z-toast: 70;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1114;
+    --surface: #171b20;
+    --surface-2: #20262d;
+    --surface-3: #2b323a;
+    --ink: #eef1f4;
+    --ink-2: #aab3be;
+    --ink-3: #7f8a96;
+    --line: #2a3138;
+    --line-strong: #44505c;
+    --overlay: rgba(0, 0, 0, 0.62);
+    --accent: #ffc533;
+    --accent-strong: #ffd45e;
+    --on-accent: #17130a;
+    --accent-text: #ffc533;
+    --accent-soft: #3a2f0c;
+    --green: #4ccb7f;
+    --green-soft: #12301f;
+    --on-green: #06170d;
+    --blue: #6aa5ff;
+    --blue-soft: #14263f;
+    --red: #ff6b5e;
+    --red-soft: #3d1815;
+    --on-red: #1c0603;
+    --series-1: #6aa5ff;
+    --series-2: #ffc533;
+    --series-3: #4ccb7f;
+    --series-4: #ff6b5e;
+    --chart-grid: #262d34;
+    --chart-axis: #7f8a96;
+    --focus: #6aa5ff;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 8px 28px rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1114;
+  --surface: #171b20;
+  --surface-2: #20262d;
+  --surface-3: #2b323a;
+  --ink: #eef1f4;
+  --ink-2: #aab3be;
+  --ink-3: #7f8a96;
+  --line: #2a3138;
+  --line-strong: #44505c;
+  --overlay: rgba(0, 0, 0, 0.62);
+  --accent: #ffc533;
+  --accent-strong: #ffd45e;
+  --on-accent: #17130a;
+  --accent-text: #ffc533;
+  --accent-soft: #3a2f0c;
+  --green: #4ccb7f;
+  --green-soft: #12301f;
+  --on-green: #06170d;
+  --blue: #6aa5ff;
+  --blue-soft: #14263f;
+  --red: #ff6b5e;
+  --red-soft: #3d1815;
+  --on-red: #1c0603;
+  --series-1: #6aa5ff;
+  --series-2: #ffc533;
+  --series-3: #4ccb7f;
+  --series-4: #ff6b5e;
+  --chart-grid: #262d34;
+  --chart-axis: #7f8a96;
+  --focus: #6aa5ff;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 28px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
