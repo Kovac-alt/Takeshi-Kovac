@@ -61,10 +61,39 @@ export const SET_TYPES = ['work', 'warmup', 'drop', 'failure'];
 export const UNITS = ['kg', 'lb'];
 export const DIST_UNIT = { kg: 'km', lb: 'mi' };
 
-/** Collections synced one document per entity. */
-export const COLLECTIONS = ['plans', 'sessions', 'notes'];
+export const MEALS = [
+  { id: 'breakfast', name: 'Breakfast' },
+  { id: 'lunch', name: 'Lunch' },
+  { id: 'dinner', name: 'Dinner' },
+  { id: 'snack', name: 'Snacks' },
+];
+export const MEAL_IDS = MEALS.map((m) => m.id);
+
+export const FOOD_CATEGORIES = [
+  { id: 'protein', name: 'Meat, fish and eggs' },
+  { id: 'dairy', name: 'Dairy' },
+  { id: 'grains', name: 'Grains and bread' },
+  { id: 'fruit', name: 'Fruit' },
+  { id: 'vegetables', name: 'Vegetables' },
+  { id: 'legumes', name: 'Beans and lentils' },
+  { id: 'nuts', name: 'Nuts and seeds' },
+  { id: 'fats', name: 'Oils and spreads' },
+  { id: 'snacks', name: 'Snacks and sweets' },
+  { id: 'drinks', name: 'Drinks' },
+  { id: 'meals', name: 'Meals and fast food' },
+  { id: 'supplements', name: 'Supplements' },
+  { id: 'other', name: 'Other' },
+];
+export const FOOD_CATEGORY_IDS = FOOD_CATEGORIES.map((c) => c.id);
+
+/** Activity levels for the calorie-target estimate, least to most active. */
+export const ACTIVITY_IDS = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
+export const SEX_IDS = ['male', 'female', 'other'];
+
+/** Collections synced one document per entity. `food` holds one document per day, id = day key. */
+export const COLLECTIONS = ['plans', 'sessions', 'notes', 'food'];
 /** Singleton documents kept in the `kv` collection, keyed by id. */
-export const KV_KEYS = ['settings', 'exmeta', 'body', 'custom'];
+export const KV_KEYS = ['settings', 'exmeta', 'body', 'custom', 'foods'];
 
 /**
  * @typedef {Object} Exercise
@@ -166,6 +195,55 @@ export const KV_KEYS = ['settings', 'exmeta', 'body', 'custom'];
  * @property {number} weight
  * @property {'kg'|'lb'} unit
  *
+ * @typedef {Object} Macros
+ * @property {number} kcal
+ * @property {number|null} protein  grams
+ * @property {number|null} carbs    grams
+ * @property {number|null} fat      grams
+ *
+ * @typedef {Object} FoodServing
+ * @property {string} label         e.g. '1 medium', '1 cup cooked', '1 slice'
+ * @property {number|null} grams    weight of that portion (ml for liquids); null when unknown
+ *
+ * @typedef {Object} Food           a food you can log: built in, or one of the user's own
+ * @property {string} id            built-in: kebab-case slug; user's own: starts with 'my-'
+ * @property {string} name          e.g. 'Chicken breast, cooked'
+ * @property {string} category      a FOOD_CATEGORY_IDS value
+ * @property {Macros|null} per100   per 100 g (per 100 ml when liquid); every built-in food has it
+ * @property {Macros|null} perServing  per one serving of servings[0]; for label-style foods with no per-100 figures
+ * @property {FoodServing[]} servings  common portions, the default first; may be empty when per100 is set
+ * @property {boolean} [liquid]     amounts are in ml
+ * @property {boolean} [custom]
+ * @property {boolean} [favorite]
+ * @property {number} [updatedAt]
+ *
+ * @typedef {Object} FoodItem       one thing eaten
+ * @property {string} id
+ * @property {string} name
+ * @property {'breakfast'|'lunch'|'dinner'|'snack'} meal
+ * @property {number} kcal          total for this entry
+ * @property {number|null} protein  total grams
+ * @property {number|null} carbs
+ * @property {number|null} fat
+ * @property {string} amount        what was eaten, as text: '150 g', '2 x 1 slice'; '' for a quick add
+ * @property {number|null} grams    weight eaten when known, so the entry can be re-scaled
+ * @property {string|null} foodId   the Food this came from, if any
+ * @property {number} at            when it was logged
+ *
+ * @typedef {Object} FoodDay        the food log for one local day
+ * @property {string} id            day key 'YYYY-MM-DD'
+ * @property {FoodItem[]} items
+ * @property {string} note
+ * @property {number} updatedAt
+ * @property {boolean} [deleted]
+ *
+ * @typedef {Object} NutritionSettings
+ * @property {number|null} kcal     daily targets; null = not set
+ * @property {number|null} protein
+ * @property {number|null} carbs
+ * @property {number|null} fat
+ * @property {{sex:'male'|'female'|'other', age:number, heightCm:number, weightKg:number, activity:string}|null} body  what the target estimate was based on
+ *
  * @typedef {Object} Profile        onboarding answers
  * @property {'muscle'|'strength'|'fat_loss'|'general'} goal
  * @property {'beginner'|'intermediate'|'advanced'} experience
@@ -188,6 +266,7 @@ export const KV_KEYS = ['settings', 'exmeta', 'body', 'custom'];
  * @property {{kg:number[], lb:number[]}} plates      plate sizes available, per side
  * @property {{kg:Object<string,number>, lb:Object<string,number>}} increments  weight jump by equipment id
  * @property {number} weekStart      1 = Monday, 0 = Sunday
+ * @property {NutritionSettings} nutrition
  * @property {number} updatedAt
  */
 
@@ -210,6 +289,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     lb: { barbell: 5, dumbbell: 5, kettlebell: 10, machine: 10, cable: 5, bodyweight: 5, band: 0, cardio_machine: 0, other: 5 },
   },
   weekStart: 1,
+  nutrition: { kcal: null, protein: null, carbs: null, fat: null, body: null },
   updatedAt: 0,
 });
 
@@ -313,6 +393,30 @@ export function newSession({ plan = null, day = null, unit = 'kg', name } = {}) 
 export function newNote({ title = '', body = '', tags = [], pinned = false } = {}) {
   const now = Date.now();
   return { id: uid(), title, body, tags, pinned, createdAt: now, updatedAt: now };
+}
+
+/** @returns {FoodItem} */
+export function newFoodItem({ name = '', meal = 'snack', kcal = 0, protein = null, carbs = null, fat = null, amount = '', grams = null, foodId = null } = {}) {
+  return { id: uid(), name, meal, kcal, protein, carbs, fat, amount, grams, foodId, at: Date.now() };
+}
+
+/** @returns {FoodDay} */
+export function newFoodDay(dayKey) {
+  return { id: dayKey, items: [], note: '', updatedAt: Date.now() };
+}
+
+/** One of the user's own foods, described per serving the way a label is. @returns {Food} */
+export function newOwnFood({ name = '', category = 'other', serving = '1 serving', grams = null, kcal = 0, protein = null, carbs = null, fat = null } = {}) {
+  return {
+    id: `my-${uid()}`,
+    name,
+    category,
+    per100: null,
+    perServing: { kcal, protein, carbs, fat },
+    servings: [{ label: serving, grams }],
+    custom: true,
+    updatedAt: Date.now(),
+  };
 }
 
 /** Slug for a custom exercise id. */
