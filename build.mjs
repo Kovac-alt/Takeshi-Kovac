@@ -51,7 +51,7 @@ const esbuildOptions = {
   minify,
   jsx: 'automatic',
   jsxImportSource: 'preact',
-  target: ['es2020', 'safari14'],
+  target: ['es2020', 'safari15'],
   legalComments: 'none',
   logLevel: 'warning',
 };

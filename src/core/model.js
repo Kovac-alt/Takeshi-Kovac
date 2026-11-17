@@ -86,14 +86,51 @@ export const FOOD_CATEGORIES = [
 ];
 export const FOOD_CATEGORY_IDS = FOOD_CATEGORIES.map((c) => c.id);
 
-/** Activity levels for the calorie-target estimate, least to most active. */
-export const ACTIVITY_IDS = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
-export const SEX_IDS = ['male', 'female', 'other'];
 
-/** Collections synced one document per entity. `food` holds one document per day, id = day key. */
-export const COLLECTIONS = ['plans', 'sessions', 'notes', 'food'];
-/** Singleton documents kept in the `kv` collection, keyed by id. */
-export const KV_KEYS = ['settings', 'exmeta', 'body', 'custom', 'foods'];
+export const GOALS = [
+  { id: 'bulk', name: 'Build muscle', blurb: 'Lean bulk: a small surplus to add size with little fat' },
+  { id: 'cut', name: 'Lose fat', blurb: 'Cut: a deficit that keeps your muscle' },
+  { id: 'recomp', name: 'Recomp', blurb: 'Lose fat and gain muscle slowly at about the same weight' },
+  { id: 'maintain', name: 'Maintain', blurb: 'Hold your weight and keep progressing in the gym' },
+];
+export const PACES = [
+  { id: 'slow', name: 'Steady' },
+  { id: 'moderate', name: 'Moderate' },
+  { id: 'fast', name: 'Aggressive' },
+];
+export const DIETS = [
+  { id: 'any', name: 'Everything' },
+  { id: 'pescatarian', name: 'Pescatarian' },
+  { id: 'vegetarian', name: 'Vegetarian' },
+  { id: 'vegan', name: 'Vegan' },
+];
+export const ACTIVITY = [
+  { id: 'sedentary', name: 'Desk job, little walking', factor: 1.2 },
+  { id: 'light', name: 'On your feet some of the day', factor: 1.35 },
+  { id: 'moderate', name: 'On your feet most of the day', factor: 1.5 },
+  { id: 'active', name: 'Physical job', factor: 1.7 },
+];
+export const EXPERIENCE = [
+  { id: 'beginner', name: 'Under 1 year' },
+  { id: 'intermediate', name: '1 to 3 years' },
+  { id: 'advanced', name: '3 years or more' },
+];
+export const GYM_SETUPS = [
+  { id: 'full_gym', name: 'Full gym' },
+  { id: 'home_barbell', name: 'Home gym with barbell' },
+  { id: 'dumbbells', name: 'Dumbbells and a bench' },
+  { id: 'bodyweight', name: 'Bodyweight' },
+];
+/** Muscle groups you can ask the plan to prioritise. */
+export const PRIORITIES = [
+  { id: 'none', name: 'Balanced', muscles: [] },
+  { id: 'chest', name: 'Chest', muscles: ['chest'] },
+  { id: 'back', name: 'Back', muscles: ['back'] },
+  { id: 'shoulders', name: 'Shoulders', muscles: ['shoulders'] },
+  { id: 'arms', name: 'Arms', muscles: ['biceps', 'triceps'] },
+  { id: 'legs', name: 'Legs', muscles: ['quads', 'hamstrings', 'calves'] },
+  { id: 'glutes', name: 'Glutes', muscles: ['glutes'] },
+];
 
 /**
  * @typedef {Object} Exercise
@@ -242,14 +279,23 @@ export const KV_KEYS = ['settings', 'exmeta', 'body', 'custom', 'foods'];
  * @property {number|null} protein
  * @property {number|null} carbs
  * @property {number|null} fat
- * @property {{sex:'male'|'female'|'other', age:number, heightCm:number, weightKg:number, activity:string}|null} body  what the target estimate was based on
+ * @property {boolean} custom        true when the user typed their own targets; goal changes then leave them alone
  *
- * @typedef {Object} Profile        onboarding answers
- * @property {'muscle'|'strength'|'fat_loss'|'general'} goal
+ * @typedef {Object} Profile        the answers everything else is worked out from
+ * @property {'bulk'|'cut'|'recomp'|'maintain'} goal
+ * @property {'slow'|'moderate'|'fast'} pace
+ * @property {'male'|'female'} sex
+ * @property {number} age
+ * @property {number} heightCm
+ * @property {number} weightKg      weight when the profile was last saved
+ * @property {number|null} goalWeightKg
+ * @property {string} activity      an ACTIVITY id: daily life outside the gym
  * @property {'beginner'|'intermediate'|'advanced'} experience
  * @property {number} daysPerWeek   2-6
  * @property {'full_gym'|'home_barbell'|'dumbbells'|'bodyweight'} equipment
- * @property {number} sessionMinutes 30 | 45 | 60 | 75 | 90
+ * @property {string} priority      a PRIORITIES id
+ * @property {'any'|'pescatarian'|'vegetarian'|'vegan'} diet
+ * @property {number} snacks        snacks per day in the meal plan, 0-2
  *
  * @typedef {Object} Settings
  * @property {'kg'|'lb'} units
@@ -289,16 +335,25 @@ export const DEFAULT_SETTINGS = Object.freeze({
     lb: { barbell: 5, dumbbell: 5, kettlebell: 10, machine: 10, cable: 5, bodyweight: 5, band: 0, cardio_machine: 0, other: 5 },
   },
   weekStart: 1,
-  nutrition: { kcal: null, protein: null, carbs: null, fat: null, body: null },
+  nutrition: { kcal: null, protein: null, carbs: null, fat: null, custom: false },
   updatedAt: 0,
 });
 
 export const DEFAULT_PROFILE = Object.freeze({
-  goal: 'muscle',
-  experience: 'beginner',
-  daysPerWeek: 3,
+  goal: 'bulk',
+  pace: 'moderate',
+  sex: 'male',
+  age: 28,
+  heightCm: 178,
+  weightKg: 78,
+  goalWeightKg: null,
+  activity: 'light',
+  experience: 'intermediate',
+  daysPerWeek: 4,
   equipment: 'full_gym',
-  sessionMinutes: 60,
+  priority: 'none',
+  diet: 'any',
+  snacks: 1,
 });
 
 let counter = 0;

@@ -1,2 +1,6 @@
 import { render } from 'preact';
-render(<p>ok</p>, document.getElementById('app'));
+import { App } from './app.jsx';
+import { initStore } from './core/store.js';
+
+initStore();
+render(<App />, document.getElementById('app'));
