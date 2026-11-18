@@ -3,6 +3,7 @@ import { state, settings, put, setKV, setUI } from '../core/store.js';
 import { MEALS, newFoodItem, newFoodDay, newOwnFood } from '../core/model.js';
 import { toast } from '../core/actions.js';
 import { dayKey, fromDayKey, fmt, fmtDate } from '../core/stats.js';
+import { FOODS, findFood, searchFoods, scaleFood } from '../core/foods.js';
 import { NumField, Sheet, Field, Meter, ConfirmButton } from '../ui.jsx';
 
 const MACROS = [['protein', 'Protein'], ['carbs', 'Carbs'], ['fat', 'Fat']];
@@ -19,9 +20,12 @@ function suggestions(q) {
 }
 
 function FoodSheet({ day, meal, item, onClose }) {
-  const [f, setF] = useState(item ? { ...item } : { name: '', amount: '', kcal: null, protein: null, carbs: null, fat: null, meal });
+  const [f, setF] = useState(item ? { ...item } : { name: '', amount: '', kcal: null, protein: null, carbs: null, fat: null, meal, grams: null, foodId: null });
   const [keep, setKeep] = useState(false);
   const set = (p) => setF({ ...f, ...p });
+  const food = f.foodId ? findFood(f.foodId) : null, known = food && food.per100 ? food : null, unit = known && known.liquid ? 'ml' : 'g';
+  const weigh = (grams, label) => (known && grams ? { grams, amount: label || `${fmt(grams)} ${unit}`, ...scaleFood(known, grams) } : { grams });
+  const choose = (x) => { const sv = x.servings[0] || { grams: 100 }, g = sv.grams || 100; setF({ ...f, name: x.name, foodId: x.id, grams: g, amount: sv.label ? `${sv.label} (${fmt(g)} ${x.liquid ? 'ml' : 'g'})` : `${fmt(g)} g`, ...scaleFood(x, g) }); };
   const getDay = () => state.food[day] || newFoodDay(day);
   const save = () => {
     const name = f.name.trim(); if (!name || f.kcal == null) return;
@@ -32,20 +36,34 @@ function FoodSheet({ day, meal, item, onClose }) {
     if (keep) { const own = state.kv.foods.foods || []; if (!own.some((x) => x.name.toLowerCase() === name.toLowerCase())) setKV('foods', { ...state.kv.foods, foods: [...own, newOwnFood({ name, serving: f.amount || '1 serving', kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat })] }); }
     onClose();
   };
-  const sug = item ? [] : suggestions(f.name);
+  const sug = item || known ? [] : suggestions(f.name), found = item || known ? [] : searchFoods(f.name);
   return (
     <Sheet title={item ? 'Edit food' : 'Add food'} onClose={onClose}>
-      <Field label="What did you eat?"><input id="food-name" type="text" maxlength="80" autocomplete="off" placeholder="Chicken and rice, banana, latte…" value={f.name} onInput={(e) => set({ name: e.target.value })} /></Field>
-      {sug.length > 0 && <div class="chips">{sug.map((x) => <button class="chip" onClick={() => setF({ ...f, name: x.name, amount: x.amount || '', kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat })}>{x.saved ? '★ ' : ''}{x.name} · {fmt(x.kcal, 0)}</button>)}</div>}
-      <div class="grid2">
-        <Field label="Meal"><select id="food-meal" value={f.meal} onChange={(e) => set({ meal: e.target.value })}>{MEALS.map((m) => <option value={m.id}>{m.name}</option>)}</select></Field>
-        <Field label="Amount (optional)"><input id="food-amount" type="text" maxlength="40" placeholder="150 g, 1 bowl" value={f.amount} onInput={(e) => set({ amount: e.target.value })} /></Field>
-      </div>
+      <Field label="What did you eat?"><input id="food-name" type="text" maxlength="80" autocomplete="off" placeholder="Search foods, or type your own" value={f.name} onInput={(e) => set({ name: e.target.value, foodId: known ? null : f.foodId })} /></Field>
+      {sug.length > 0 && <div class="chips">{sug.map((x) => <button class="chip" onClick={() => setF({ ...f, name: x.name, amount: x.amount || '', kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat, foodId: null, grams: null })}>{x.saved ? '★ ' : ''}{x.name} · {fmt(x.kcal, 0)}</button>)}</div>}
+      {found.length > 0 && <div class="list tight food-hits">{found.map((x) => <button class="row" onClick={() => choose(x)}><span class="row-main"><b>{x.name}</b><small>{x.servings[0].label}, {fmt(x.servings[0].grams)} {x.liquid ? 'ml' : 'g'}</small></span><span class="num muted">{fmt(x.per100.kcal * x.servings[0].grams / 100, 0)} kcal</span></button>)}</div>}
+      {!item && !known && !f.name.trim() && <p class="muted small">Type to search {FOODS.length} common foods, or enter anything with its calories yourself.</p>}
+      {known ? (
+        <div class="subcard">
+          <p class="small"><span class="muted">Per 100 {unit}:</span> <b class="num">{fmt(known.per100.kcal, 0)}</b> kcal · {fmt(known.per100.protein)} g protein · {fmt(known.per100.carbs)} g carbs · {fmt(known.per100.fat)} g fat <span class="muted">(typical values)</span></p>
+          <div class="grid2">
+            <Field label={`How much (${unit})`}><NumField id="food-grams" value={f.grams} onChange={(v) => set(weigh(v))} /></Field>
+            <Field label="Meal"><select id="food-meal" value={f.meal} onChange={(e) => set({ meal: e.target.value })}>{MEALS.map((m) => <option value={m.id}>{m.name}</option>)}</select></Field>
+          </div>
+          <div class="chips">{known.servings.filter((sv) => sv.grams).flatMap((sv) => [1, 2]).map((n, i) => { const sv = known.servings[Math.floor(i / 2)], g = sv.grams * n; return <button class="chip" aria-pressed={f.grams === g} onClick={() => set(weigh(g, `${n === 2 ? '2 × ' : ''}${sv.label} (${fmt(g)} ${unit})`))}>{n === 2 ? '2 × ' : ''}{sv.label}</button>; })}
+            <button class="chip" aria-pressed={f.grams === 100} onClick={() => set(weigh(100))}>100 {unit}</button></div>
+        </div>
+      ) : (
+        <div class="grid2">
+          <Field label="Meal"><select id="food-meal" value={f.meal} onChange={(e) => set({ meal: e.target.value })}>{MEALS.map((m) => <option value={m.id}>{m.name}</option>)}</select></Field>
+          <Field label="Amount (optional)"><input id="food-amount" type="text" maxlength="40" placeholder="150 g, 1 bowl" value={f.amount} onInput={(e) => set({ amount: e.target.value })} /></Field>
+        </div>
+      )}
       <div class="grid4">
         <Field label="Calories"><NumField id="food-kcal" decimal={false} value={f.kcal} onChange={(v) => set({ kcal: v })} /></Field>
         {MACROS.map(([k, l]) => <Field label={`${l} g`}><NumField id={`food-${k}`} value={f[k]} onChange={(v) => set({ [k]: v })} /></Field>)}
       </div>
-      {!item && <label class="checkline"><input id="food-keep" type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Save to my foods for one-tap logging</label>}
+      {!item && !known && <label class="checkline"><input id="food-keep" type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Save to my foods for one-tap logging</label>}
       <div class="actions">
         {item && <ConfirmButton label="Delete" confirm="Tap again to delete" onConfirm={() => { const d = getDay(); d.items = d.items.filter((x) => x.id !== item.id); put('food', d); onClose(); }} />}
         <span class="grow" /><button class="btn primary" disabled={!f.name.trim() || f.kcal == null} onClick={save}>{item ? 'Save' : 'Add'}</button>

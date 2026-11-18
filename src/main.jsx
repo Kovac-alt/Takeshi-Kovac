@@ -34,7 +34,7 @@ function App() {
   return (
     <div class={`app${scr ? ' on-screen' : ''}`}>
       {!scr && (
-        <header class="hdr"><div class="hdr-in"><h1>Lift <span>Ledger</span></h1><StatusChip /><button class="btn ghost sm" onClick={() => setUI({ screen: { name: 'settings' } })}>Settings</button></div></header>
+        <header class="hdr"><div class="hdr-in"><svg class="mark" viewBox="6 22 88 56" aria-hidden="true"><path d="M50 37 54 27 58 37 68 33 74 25 78 32 94 30 88 52 79 45 72 63 62 52 50 76 38 52 28 63 21 45 12 52 6 30 22 32 26 25 32 33 42 37 46 27Z"/></svg><h1>Lift <span>Ledger</span></h1><StatusChip /><button class="btn ghost sm" onClick={() => setUI({ screen: { name: 'settings' } })}>Settings</button></div></header>
       )}
       <main class="content">
         {state.slow && <p class="banner">Your data is taking a while to arrive. Anything shown may be out of date.</p>}

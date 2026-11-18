@@ -20,10 +20,9 @@ const html = `<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ledger">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#f1f3f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)">
-<style>:root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07080a">
+<style>:root{color-scheme:dark;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
 ${fragment}
@@ -37,7 +36,7 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().
 
 const manifest = {
   name: 'Pocket Ledger', short_name: 'Ledger', description: 'Personal finance tracker and planner',
-  start_url: './', scope: './', display: 'standalone', background_color: '#f1f3f7', theme_color: '#1c5cab',
+  start_url: './', scope: './', display: 'standalone', background_color: '#07080a', theme_color: '#07080a',
   icons: [
     { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
     { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },

@@ -4,7 +4,9 @@ import { newPlan, newPlanDay, newPlanItem } from '../core/model.js';
 import { defaultTarget, toast } from '../core/actions.js';
 import { getExercise } from '../core/exercises.js';
 import { NumField, ConfirmButton, ScreenHead, ExercisePicker, Field } from '../ui.jsx';
-import { TemplateList } from './today.jsx';
+import { TemplateList, PlanBuilder } from './today.jsx';
+
+const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export function Plans() {
   const s = settings(), plans = Object.values(state.plans).sort((a, b) => (b.id === s.activePlanId) - (a.id === s.activePlanId) || b.updatedAt - a.updatedAt);
@@ -22,6 +24,7 @@ export function Plans() {
           {!plans.length && <p class="empty">No plans yet. Use a template below or start a new one.</p>}
         </div>
       </section>
+      <section class="card"><div><h2>Build a plan for me</h2><p class="muted small">Five questions, then a plan matched to your goal, days and equipment. It is added to your plans and made active.</p></div><PlanBuilder /></section>
       <section class="card"><div><h2>Templates</h2><p class="muted small">Each one is copied into your plans, so you can change it freely.</p></div><TemplateList /></section>
     </>
   );
@@ -32,6 +35,7 @@ export function PlanEditor({ id }) {
   const [pickFor, setPickFor] = useState(null);
   if (!plan) return <><ScreenHead title="Plan" /><p class="empty">This plan no longer exists.</p></>;
   const save = () => put('plans', plan);
+  const sch = { mode: 'rotation', ...(plan.schedule || {}), weekdays: (plan.schedule && plan.schedule.weekdays) || [null, null, null, null, null, null, null] }, fixed = sch.mode === 'weekdays';
   const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; save(); };
   return (
     <>
@@ -40,6 +44,14 @@ export function PlanEditor({ id }) {
         <Field label="Plan name"><input id="plan-name" type="text" maxlength="60" value={plan.name} onInput={(e) => { plan.name = e.target.value; save(); }} /></Field>
         {plan.id === s.activePlanId ? <p class="muted small">This is your active plan. Today suggests its days in order.</p>
           : <button class="btn sm" onClick={() => patchSettings({ activePlanId: plan.id })}>Make this my active plan</button>}
+      </section>
+      <section class="card">
+        <div><h2>Schedule</h2><p class="muted small">{fixed ? 'Each training day has its own weekday. Other days are rest days.' : 'Days are done in order, whenever you train.'}</p></div>
+        <div class="seg"><button aria-pressed={!fixed} onClick={() => { plan.schedule = { ...sch, mode: 'rotation' }; save(); }}>In order</button><button aria-pressed={fixed} onClick={() => { plan.schedule = { ...sch, mode: 'weekdays' }; save(); }}>Fixed weekdays</button></div>
+        {fixed && <div class="weekplan">{WEEKDAY_NAMES.map((name, i) => (
+          <label class="weekplan-row"><span>{name}</span><select id={`wd-${i}`} value={plan.days.some((d) => d.id === sch.weekdays[i]) ? sch.weekdays[i] : ''} onChange={(e) => { const w = [...sch.weekdays]; w[i] = e.target.value || null; plan.schedule = { ...sch, weekdays: w }; save(); }}>
+            <option value="">Rest</option>{plan.days.map((d) => <option value={d.id}>{d.name}</option>)}</select></label>
+        ))}</div>}
       </section>
       {plan.days.map((day, di) => (
         <section class="card" key={day.id}>

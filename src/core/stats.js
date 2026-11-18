@@ -88,3 +88,11 @@ export function estimateTargets({ sex, age, heightCm, weightKg, activity, goal }
   const protein = Math.round(weightKg * 1.8), fat = Math.round(kcal * 0.25 / 9);
   return { kcal, protein, fat, carbs: Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4)) };
 }
+/** Plates for one side of a barbell, largest first. `short` is what the available plates cannot make up. */
+export function platesPerSide(total, bar, plates) {
+  if (!(total > 0) || total < bar) return null;
+  let rem = (total - bar) / 2;
+  const out = [];
+  for (const p of [...plates].filter((x) => x > 0).sort((a, b) => b - a)) while (rem >= p - 1e-9) { out.push(p); rem -= p; }
+  return { plates: out, short: Math.round(rem * 2 * 100) / 100 };
+}

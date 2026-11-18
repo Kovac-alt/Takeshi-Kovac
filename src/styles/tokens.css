@@ -1,55 +1,56 @@
 /* Layout: phone-first single column (max 640px) under a compact sticky header, with a fixed
-   bottom tab bar. From 960px up the tab bar becomes a left rail and the content widens.
+   bottom tab bar. From 960px up the tab bar becomes a left rail.
 
-   Color: cool iron neutrals, with the four bumper-plate colors doing semantic work:
-   yellow (15) = primary action and personal records, green (10) = done,
-   blue (20) = information and chart series, red (25) = destructive and high effort.
+   Look: one committed dark theme, a city at night under a searchlight. Near-black gunmetal
+   surfaces, a single signal yellow for actions, progress and records, and cold steel blue
+   for secondary data. Green and red stay reserved for good and bad. Primary buttons and
+   badges have cut corners.
 
-   Type: Barlow Condensed for headings, labels and every number you read mid-set;
-   Barlow for running text. */
+   Type: Big Shoulders Display (tall, industrial caps) for headings, labels and every number
+   you read mid-set; Barlow for running text. */
 
 :root {
-  /* neutrals */
-  --bg: #eef0f2;
-  --surface: #ffffff;
-  --surface-2: #e3e7eb;
-  --surface-3: #d3d9df;
-  --ink: #12161b;
-  --ink-2: #47515c;
-  --ink-3: #6f7a86;
-  --line: #d2d8de;
-  --line-strong: #aeb7c1;
-  --overlay: rgba(14, 17, 20, 0.5);
+  color-scheme: dark;
+  --bg: #07080a;
+  --surface: #101216;
+  --surface-2: #191c22;
+  --surface-3: #242830;
+  --ink: #f3f4f6;
+  --ink-2: #b6bcc7;
+  --ink-3: #7d8593;
+  --line: #22262e;
+  --line-strong: #3a404c;
+  --overlay: rgba(0, 0, 0, 0.72);
 
-  /* plates */
-  --accent: #f7b500;
-  --accent-strong: #e0a300;
-  --on-accent: #17130a;
-  --accent-text: #7d5200;
-  --accent-soft: #fdf0c6;
-  --green: #1a7f45;
-  --green-soft: #d9f0e2;
-  --on-green: #ffffff;
-  --blue: #1d5bbf;
-  --blue-soft: #dde9fb;
-  --red: #c42d25;
-  --red-soft: #fbdedb;
-  --on-red: #ffffff;
+  --accent: #ffd60a;
+  --accent-strong: #ffe14d;
+  --on-accent: #0a0a0a;
+  --accent-text: #ffd60a;
+  --accent-soft: #262105;
+  --glow: rgba(255, 214, 10, 0.11);
+  --green: #4ccb7f;
+  --green-soft: #10291b;
+  --on-green: #06170d;
+  --blue: #86abcf;
+  --blue-soft: #15202b;
+  --red: #ff6b5e;
+  --red-soft: #3a1614;
+  --on-red: #1c0603;
 
-  /* chart series, in order of use */
-  --series-1: #1d5bbf;
-  --series-2: #c98a00;
-  --series-3: #1a7f45;
-  --series-4: #c42d25;
-  --chart-grid: #dde2e7;
-  --chart-axis: #6f7a86;
+  --series-1: #ffd60a;
+  --series-2: #86abcf;
+  --series-3: #4ccb7f;
+  --series-4: #ff6b5e;
+  --chart-grid: #1f232a;
+  --chart-axis: #7d8593;
 
-  --focus: #1d5bbf;
-  --shadow-1: 0 1px 2px rgba(18, 22, 27, 0.08);
-  --shadow-2: 0 8px 28px rgba(18, 22, 27, 0.18);
+  --focus: #ffe14d;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 12px 36px rgba(0, 0, 0, 0.7);
+  --cut: 10px;
 
   /* type */
-  --font-display: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-display: "Big Shoulders Display", "Barlow Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
   --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --fs-xs: 0.75rem;
   --fs-sm: 0.875rem;
@@ -91,78 +92,4 @@
   --z-sheet: 50;
   --z-dialog: 60;
   --z-toast: 70;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0e1114;
-    --surface: #171b20;
-    --surface-2: #20262d;
-    --surface-3: #2b323a;
-    --ink: #eef1f4;
-    --ink-2: #aab3be;
-    --ink-3: #7f8a96;
-    --line: #2a3138;
-    --line-strong: #44505c;
-    --overlay: rgba(0, 0, 0, 0.62);
-    --accent: #ffc533;
-    --accent-strong: #ffd45e;
-    --on-accent: #17130a;
-    --accent-text: #ffc533;
-    --accent-soft: #3a2f0c;
-    --green: #4ccb7f;
-    --green-soft: #12301f;
-    --on-green: #06170d;
-    --blue: #6aa5ff;
-    --blue-soft: #14263f;
-    --red: #ff6b5e;
-    --red-soft: #3d1815;
-    --on-red: #1c0603;
-    --series-1: #6aa5ff;
-    --series-2: #ffc533;
-    --series-3: #4ccb7f;
-    --series-4: #ff6b5e;
-    --chart-grid: #262d34;
-    --chart-axis: #7f8a96;
-    --focus: #6aa5ff;
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-2: 0 8px 28px rgba(0, 0, 0, 0.55);
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme="dark"] {
-  --bg: #0e1114;
-  --surface: #171b20;
-  --surface-2: #20262d;
-  --surface-3: #2b323a;
-  --ink: #eef1f4;
-  --ink-2: #aab3be;
-  --ink-3: #7f8a96;
-  --line: #2a3138;
-  --line-strong: #44505c;
-  --overlay: rgba(0, 0, 0, 0.62);
-  --accent: #ffc533;
-  --accent-strong: #ffd45e;
-  --on-accent: #17130a;
-  --accent-text: #ffc533;
-  --accent-soft: #3a2f0c;
-  --green: #4ccb7f;
-  --green-soft: #12301f;
-  --on-green: #06170d;
-  --blue: #6aa5ff;
-  --blue-soft: #14263f;
-  --red: #ff6b5e;
-  --red-soft: #3d1815;
-  --on-red: #1c0603;
-  --series-1: #6aa5ff;
-  --series-2: #ffc533;
-  --series-3: #4ccb7f;
-  --series-4: #ff6b5e;
-  --chart-grid: #262d34;
-  --chart-axis: #7f8a96;
-  --focus: #6aa5ff;
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 8px 28px rgba(0, 0, 0, 0.55);
-  color-scheme: dark;
 }

@@ -23,7 +23,7 @@ const outDir = outArg ? path.resolve(outArg.slice('--out='.length)) : path.join(
 
 const TITLE = 'Lift Ledger';
 const FONTS =
-  'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap';
+  'https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap';
 
 // Stylesheets are concatenated in this order; every file in styles/views follows, sorted by name.
 const STYLE_ORDER = ['tokens.css', 'base.css', 'components.css', 'charts.css'];
@@ -60,7 +60,7 @@ const esbuildOptions = {
 // The mirror of the small reset the artifact host injects, so the standalone
 // build lays out exactly like the published page.
 const HOST_RESET =
-  ':root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}' +
+  ':root{color-scheme:dark;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}' +
   'body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}';
 
 async function emit(js) {
@@ -96,16 +96,15 @@ async function emitInstallable(fragment) {
     `<title>${TITLE}</title>\n` +
     '<link rel="manifest" href="manifest.webmanifest">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">\n' +
     '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="mobile-web-app-capable" content="yes">\n' +
-    '<meta name="apple-mobile-web-app-title" content="Lift Ledger">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n' +
-    '<meta name="theme-color" content="#eef0f2" media="(prefers-color-scheme: light)">\n' +
-    '<meta name="theme-color" content="#0e1114" media="(prefers-color-scheme: dark)">\n' +
+    '<meta name="apple-mobile-web-app-title" content="Lift Ledger">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n' +
+    '<meta name="theme-color" content="#07080a">\n' +
     `<style>${HOST_RESET}</style>\n</head>\n<body>\n` +
     fragment.replace(/<title>.*?<\/title>\n/, '') +
     "<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});\n" +
     'if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});<' + '/script>\n</body>\n</html>\n';
   const manifest = {
     name: TITLE, short_name: 'Lift Ledger', description: 'Workout plan, tracker and notes',
-    start_url: './', scope: './', display: 'standalone', background_color: '#eef0f2', theme_color: '#12161b',
+    start_url: './', scope: './', display: 'standalone', background_color: '#07080a', theme_color: '#07080a',
     icons: [192, 512].map((n) => ({ src: `icon-${n}.png`, sizes: `${n}x${n}`, type: 'image/png', purpose: 'any maskable' })),
   };
   // Network first so updates arrive when online; the cached copy opens the app offline.

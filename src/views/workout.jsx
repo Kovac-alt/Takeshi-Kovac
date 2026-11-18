@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'preact/hooks';
-import { state, ui, setUI, settings, put, remove } from '../core/store.js';
+import { state, ui, setUI, settings, put, remove, setKV } from '../core/store.js';
 import { newEntry, newSet, isCountedSet, DIST_UNIT } from '../core/model.js';
 import { activeSession, defaultTarget, targetText, toast } from '../core/actions.js';
-import { getExercise } from '../core/exercises.js';
-import { lastEntry, exerciseHistory, setScore, setText, convert, countedSets, sessionVolume, fmt, fmtClock, fmtDur, fmtDate } from '../core/stats.js';
+import { getExercise, allExercises } from '../core/exercises.js';
+import { lastEntry, exerciseHistory, setScore, setText, convert, countedSets, sessionVolume, platesPerSide, fmt, fmtClock, fmtDur, fmtDate } from '../core/stats.js';
 import { NumField, Sheet, ConfirmButton, ScreenHead, ExercisePicker, Field } from '../ui.jsx';
 
 let audio = null;
@@ -57,10 +57,16 @@ const FIELDS = {
   timed: (u) => [['seconds', 'sec', false], ['weight', `+ ${u}`, true]],
   cardio: (u) => [['minutes', 'min', true], ['distance', DIST_UNIT[u], true]],
 };
+const TYPE_MARK = { warmup: 'W', drop: 'D', failure: 'F' };
+const TYPE_NAME = { work: 'working set', warmup: 'warm-up, not counted', drop: 'drop set', failure: 'to failure' };
+const NEXT_TYPE = { work: 'warmup', warmup: 'drop', drop: 'failure', failure: 'work' };
 const REQUIRED = { weight: ['weight', 'reps'], bodyweight: ['reps'], timed: ['seconds'], cardio: ['minutes'] };
 
 function EntryCard({ ses, entry, save }) {
   const ex = getExercise(entry.exerciseId), s = settings();
+  const [swapping, setSwapping] = useState(false);
+  const meta = (state.kv.exmeta.items || {})[ex.id] || {};
+  const setMeta = (patch) => setKV('exmeta', { ...state.kv.exmeta, items: { ...(state.kv.exmeta.items || {}), [ex.id]: { ...meta, ...patch } } });
   const last = lastEntry(state.sessions, entry.exerciseId, ses.id);
   const lastSets = last ? last.entry.sets.filter(isCountedSet) : [];
   const fields = FIELDS[ex.kind](ses.unit);
@@ -88,6 +94,10 @@ function EntryCard({ ses, entry, save }) {
     const rest = (entry.target && entry.target.restSec) || (ex.kind === 'cardio' ? 0 : s.restSec);
     if (s.autoRest && rest > 0) setUI({ rest: { endsAt: Date.now() + rest * 1000, total: rest } });
   };
+  const similar = swapping ? allExercises().filter((o) => o.id !== ex.id && (o.pattern === ex.pattern && ex.pattern !== 'other' ? true : o.muscle === ex.muscle && o.kind === ex.kind)).sort((x, y) => (y.pattern === ex.pattern) - (x.pattern === ex.pattern)) : [];
+  const nextIdx = entry.sets.findIndex((x) => !x.done), nextSet = nextIdx >= 0 ? entry.sets[nextIdx] : null;
+  const loadFor = nextSet ? (nextSet.weight != null ? nextSet.weight : ghost(nextIdx).weight) : null;
+  const load = ex.equipment === 'barbell' && ex.kind === 'weight' && loadFor ? platesPerSide(loadFor, s.barWeight[ses.unit], s.plates[ses.unit]) : null;
   return (
     <section class="card entry">
       <div class="card-head">
@@ -100,19 +110,31 @@ function EntryCard({ ses, entry, save }) {
         <div class="set set-head"><span>Set</span>{fields.map(([, label]) => <span>{label}</span>)}<span>Done</span></div>
         {entry.sets.map((set, i) => { const g = ghost(i); return (
           <div class={`set${set.done ? ' done' : ''}`} key={set.id}>
-            <span class="num set-n">{i + 1}</span>
+            <button class={`set-n num ${set.type !== 'work' ? 'typed' : ''}`} aria-label={`Set ${i + 1}: ${TYPE_NAME[set.type] || 'working set'}. Tap to change.`} onClick={() => { set.type = NEXT_TYPE[set.type] || 'work'; save(); toast(`Set ${i + 1}: ${TYPE_NAME[set.type]}.`); }}>{TYPE_MARK[set.type] || i + 1}</button>
             {fields.map(([k, label, dec]) => <NumField id={`f-${set.id}-${k}`} value={set[k]} decimal={dec} label={`Set ${i + 1} ${label}`} placeholder={g[k] != null ? fmt(g[k]) : '–'} onChange={(v) => { set[k] = v; save(); }} />)}
             <button class="check" aria-pressed={set.done} aria-label={`Set ${i + 1} done`} onClick={() => toggle(set, i)}>{set.done ? '✓' : ''}</button>
           </div>
         ); })}
       </div>
+      {load && <p class="plates small"><span class="muted">Each side for {fmt(loadFor)} {ses.unit}:</span> <b class="num">{load.plates.length ? load.plates.map((p) => fmt(p)).join(' · ') : 'empty bar'}</b>{load.short > 0 ? <span class="muted"> ({fmt(load.short)} {ses.unit} short with your plates)</span> : ''}</p>}
       <div class="actions">
         <button class="btn sm" onClick={() => { entry.sets.push(newSet('work')); save(); }}>+ Set</button>
-        {entry.sets.length > 1 && <button class="btn sm ghost" onClick={() => { entry.sets.pop(); save(); }}>Remove last set</button>}
+        <button class="btn sm ghost" onClick={() => setSwapping(true)}>Swap</button>
+        {entry.sets.length > 1 && <button class="btn sm ghost" onClick={() => { entry.sets.pop(); save(); }}>− Set</button>}
         <span class="grow" />
         <ConfirmButton label="Remove" confirm="Tap again to remove" class="btn sm ghost" onConfirm={() => { ses.entries = ses.entries.filter((e) => e !== entry); save(); }} />
       </div>
       <input id={`note-${entry.id}`} class="note-in" type="text" placeholder="Note for today (optional)" maxlength="160" value={entry.note} onInput={(e) => { entry.note = e.target.value; save(); }} />
+      <input id={`meta-${entry.id}`} class="note-in" type="text" placeholder="Reminder shown every time, e.g. seat 4, narrow grip" maxlength="120" value={meta.note || ''} onInput={(e) => setMeta({ note: e.target.value })} />
+      {swapping && (
+        <Sheet title={`Swap ${ex.name}`} onClose={() => setSwapping(false)}>
+          <p class="muted small">Similar movements. Sets you have already logged are kept.</p>
+          <div class="list picker-list">
+            {similar.map((o) => <button class="row" onClick={() => { entry.exerciseId = o.id; delete entry.planItemId; save(); setSwapping(false); }}><span class="row-main"><b>{o.name}</b><small>{o.equipment.replace('_', ' ')}</small></span></button>)}
+            {!similar.length && <p class="empty">Nothing similar in the library. Remove this exercise and add another instead.</p>}
+          </div>
+        </Sheet>
+      )}
     </section>
   );
 }

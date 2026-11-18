@@ -1,18 +1,18 @@
 import { useState } from 'preact/hooks';
-import { state, setUI, settings, remove } from '../core/store.js';
+import { state, setUI, settings, remove, setKV } from '../core/store.js';
 import { isCountedSet, MUSCLES, newEntry } from '../core/model.js';
 import { startSession, activeSession, toast } from '../core/actions.js';
 import { put } from '../core/store.js';
 import { getExercise } from '../core/exercises.js';
-import { doneSessions, sessionVolume, countedSets, exerciseHistory, muscleSets, startOfWeek, setText, SCORE_LABEL, scoreUnit, fmt, fmtDate, fmtDur } from '../core/stats.js';
-import { ConfirmButton, ScreenHead, LineChart, Meter } from '../ui.jsx';
+import { doneSessions, sessionVolume, countedSets, exerciseHistory, muscleSets, startOfWeek, setText, SCORE_LABEL, scoreUnit, fmt, fmtDate, fmtDur, convert, dayKey, fromDayKey } from '../core/stats.js';
+import { ConfirmButton, ScreenHead, LineChart, Meter, NumField } from '../ui.jsx';
 
 export function History() {
   const [mode, setMode] = useState('sessions');
   const s = settings(), done = doneSessions(state.sessions);
   return (
     <>
-      <div class="seg" role="tablist"><button role="tab" aria-selected={mode === 'sessions'} aria-pressed={mode === 'sessions'} onClick={() => setMode('sessions')}>Workouts</button><button role="tab" aria-selected={mode === 'progress'} aria-pressed={mode === 'progress'} onClick={() => setMode('progress')}>Progress</button></div>
+      <div class="seg" role="tablist"><button role="tab" aria-selected={mode === 'sessions'} aria-pressed={mode === 'sessions'} onClick={() => setMode('sessions')}>Workouts</button><button role="tab" aria-selected={mode === 'progress'} aria-pressed={mode === 'progress'} onClick={() => setMode('progress')}>Progress</button><button role="tab" aria-selected={mode === 'body'} aria-pressed={mode === 'body'} onClick={() => setMode('body')}>Body</button></div>
       {mode === 'sessions' ? (
         <section class="card">
           <div class="card-head"><h2>Past workouts</h2><span class="muted small">{done.length} in total</span></div>
@@ -27,7 +27,31 @@ export function History() {
             {!done.length && <p class="empty">Finished workouts show up here. Start one from Today.</p>}
           </div>
         </section>
-      ) : <Progress />}
+      ) : mode === 'body' ? <Body /> : <Progress />}
+    </>
+  );
+}
+
+function Body() {
+  const s = settings(), [w, setW] = useState(null);
+  const entries = [...(state.kv.body.entries || [])].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const write = (list) => setKV('body', { ...state.kv.body, entries: list });
+  const points = entries.map((e) => ({ t: fromDayKey(e.date).getTime(), v: convert(e.weight, e.unit, s.units) }));
+  const latest = points[points.length - 1], cutoff = Date.now() - 30 * 864e5, base = points.find((p) => p.t >= cutoff) || points[0];
+  const change = latest && base && base !== latest ? latest.v - base.v : null;
+  return (
+    <>
+      <section class="card">
+        <div class="card-head"><div><h2>Body weight</h2><p class="muted small">One entry a day. Weighing at the same time each morning gives the cleanest trend.</p></div></div>
+        <div class="actions"><NumField id="body-w" class="grow" value={w} onChange={setW} placeholder={latest ? fmt(latest.v, 1) : s.units} label={`Weight in ${s.units}`} />
+          <button class="btn primary" disabled={!w} onClick={() => { write([...entries.filter((e) => e.date !== dayKey()), { date: dayKey(), weight: w, unit: s.units }]); setW(null); }}>Log today</button></div>
+        {points.length > 0 && <div class="stats"><div><b class="num">{fmt(latest.v, 1)}</b><span>{s.units} now</span></div>
+          <div><b class="num">{change == null ? '–' : `${change > 0 ? '+' : change < 0 ? '−' : ''}${fmt(Math.abs(change), 1)}`}</b><span>last 30 days</span></div><div><b class="num">{points.length}</b><span>entries</span></div></div>}
+        {points.length > 1 && <LineChart points={points} unit={s.units} />}
+        {!points.length && <p class="empty">Log your weight to start a trend line.</p>}
+      </section>
+      {entries.length > 0 && <section class="card"><h2>Entries</h2><div class="list tight">{[...entries].reverse().slice(0, 14).map((e) => (
+        <div class="row"><span class="row-main"><b>{fmtDate(fromDayKey(e.date).getTime())}</b></span><span class="num">{fmt(e.weight, 1)} {e.unit}</span><ConfirmButton label="✕" confirm="Delete?" class="btn sm ghost" onConfirm={() => write(entries.filter((x) => x.date !== e.date))} /></div>))}</div></section>}
     </>
   );
 }

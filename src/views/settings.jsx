@@ -10,7 +10,7 @@ const ACTIVITY = { sedentary: 'Mostly sitting', light: 'Lightly active', moderat
 
 function Estimator({ onUse }) {
   const prev = settings().nutrition.body || {};
-  const [b, setB] = useState({ sex: prev.sex || 'male', age: prev.age || null, heightCm: prev.heightCm || null, weightKg: prev.weightKg || null, activity: prev.activity || 'moderate', goal: 'maintain' });
+  const [b, setB] = useState({ sex: prev.sex || 'male', age: prev.age || null, heightCm: prev.heightCm || null, weightKg: prev.weightKg || latestBodyKg(), activity: prev.activity || 'moderate', goal: 'maintain' });
   const set = (p) => setB({ ...b, ...p });
   const ok = b.age && b.heightCm && b.weightKg, est = ok ? estimateTargets(b) : null;
   return (
@@ -29,11 +29,12 @@ function Estimator({ onUse }) {
     </div>
   );
 }
+function latestBodyKg() { const e = [...(state.kv.body.entries || [])].sort((a, b) => (a.date < b.date ? -1 : 1)).pop(); return e ? Math.round((e.unit === 'kg' ? e.weight : e.weight * 0.45359237) * 10) / 10 : null; }
 const Toggle = ({ id, label, value, onChange }) => <label class="checkline"><input id={id} type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} /> {label}</label>;
 
 export function Settings() {
   const s = settings(), n = s.nutrition;
-  const [backupText, setBackupText] = useState(null);
+  const [backupText, setBackupText] = useState(null), [plates, setPlates] = useState(null);
   const setN = (p) => patchSettings({ nutrition: { ...n, ...p } });
   const doExport = async () => {
     const text = exportAll(), filename = `lift-ledger-${dayKey()}.json`;
@@ -57,6 +58,12 @@ export function Settings() {
           <Field label="Default rest (seconds)"><NumField id="set-rest" decimal={false} value={s.restSec} onChange={(v) => patchSettings({ restSec: v || 0 })} /></Field>
         </div>
         <p class="muted small">Changing the unit affects new workouts. Past workouts keep the unit they were logged in.</p>
+        <div class="grid2">
+          <Field label={`Barbell weight (${s.units})`}><NumField id="set-bar" value={s.barWeight[s.units]} onChange={(v) => patchSettings({ barWeight: { ...s.barWeight, [s.units]: v || 0 } })} /></Field>
+          <Field label={`Plates you have (${s.units})`}><input id="set-plates" type="text" inputmode="decimal" value={plates !== null ? plates : s.plates[s.units].join(', ')} onFocus={() => setPlates(s.plates[s.units].join(', '))} onInput={(e) => setPlates(e.target.value)}
+            onBlur={() => { const list = (plates || '').split(/[\s,;]+/).map((x) => parseFloat(x.replace(',', '.'))).filter((x) => x > 0).sort((a, b) => b - a); if (list.length) patchSettings({ plates: { ...s.plates, [s.units]: [...new Set(list)] } }); setPlates(null); }} /></Field>
+        </div>
+        <p class="muted small">Used to show what to load on each side of the bar during barbell lifts.</p>
         <Toggle id="set-autorest" label="Start the rest timer when I tick off a set" value={s.autoRest} onChange={(v) => patchSettings({ autoRest: v })} />
         <Toggle id="set-sound" label="Beep when rest is over" value={s.sound} onChange={(v) => patchSettings({ sound: v })} />
         <Toggle id="set-vibrate" label="Vibrate when rest is over (not available on iPhone)" value={s.vibrate} onChange={(v) => patchSettings({ vibrate: v })} />
