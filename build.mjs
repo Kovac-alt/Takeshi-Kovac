@@ -2,6 +2,7 @@
 //   dist/artifact.html  page fragment for publishing as a Claude artifact
 //                       (the host wraps it in its own <html>/<head>/<body>)
 //   dist/index.html     standalone document: open it from disk or host it anywhere
+//   docs/lift-ledger/   installable web app for a phone's home screen (manifest + offline cache)
 //
 // Usage: node build.mjs [--watch] [--no-minify] [--out=<dir>]
 import { build, context, transform } from 'esbuild';
@@ -51,7 +52,7 @@ const esbuildOptions = {
   minify,
   jsx: 'automatic',
   jsxImportSource: 'preact',
-  target: ['es2020', 'safari14'],
+  target: ['es2020'],
   legalComments: 'none',
   logLevel: 'warning',
 };
@@ -77,12 +78,55 @@ async function emit(js) {
     '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     `<style>${HOST_RESET}</style></head><body>\n${fragment}</body></html>\n`;
+  if (!outArg) await emitInstallable(fragment);
   await mkdir(outDir, { recursive: true });
   await writeFile(path.join(outDir, 'artifact.html'), fragment);
   await writeFile(path.join(outDir, 'index.html'), standalone);
   const kb = (n) => (n / 1024).toFixed(1) + ' kB';
   const rel = path.relative(root, outDir) || '.';
   console.log(`built ${rel}/artifact.html (${kb(fragment.length)}), ${rel}/index.html (${kb(standalone.length)})`);
+}
+
+// The home-screen version served from docs/ by any static host. Icons are committed beside it.
+async function emitInstallable(fragment) {
+  const dir = path.join(root, 'docs', 'lift-ledger');
+  const html =
+    '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
+    `<title>${TITLE}</title>\n` +
+    '<link rel="manifest" href="manifest.webmanifest">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">\n' +
+    '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="mobile-web-app-capable" content="yes">\n' +
+    '<meta name="apple-mobile-web-app-title" content="Lift Ledger">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n' +
+    '<meta name="theme-color" content="#eef0f2" media="(prefers-color-scheme: light)">\n' +
+    '<meta name="theme-color" content="#0e1114" media="(prefers-color-scheme: dark)">\n' +
+    `<style>${HOST_RESET}</style>\n</head>\n<body>\n` +
+    fragment.replace(/<title>.*?<\/title>\n/, '') +
+    "<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});\n" +
+    'if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});<' + '/script>\n</body>\n</html>\n';
+  const manifest = {
+    name: TITLE, short_name: 'Lift Ledger', description: 'Workout plan, tracker and notes',
+    start_url: './', scope: './', display: 'standalone', background_color: '#eef0f2', theme_color: '#12161b',
+    icons: [192, 512].map((n) => ({ src: `icon-${n}.png`, sizes: `${n}x${n}`, type: 'image/png', purpose: 'any maskable' })),
+  };
+  // Network first so updates arrive when online; the cached copy opens the app offline.
+  const sw = `const CACHE = 'lift-ledger-${Date.now().toString(36)}';
+const SHELL = ['./', 'manifest.webmanifest', 'icon-192.png', 'apple-touch-icon.png'];
+self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())));
+self.addEventListener('activate', (e) => e.waitUntil(caches.keys()
+  .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(fetch(e.request).then((res) => {
+    if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
+    return res;
+  }).catch(() => caches.match(e.request, { ignoreSearch: true })
+    .then((hit) => hit || (e.request.mode === 'navigate' ? caches.match('./') : Response.error()))));
+});
+`;
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, 'index.html'), html);
+  await writeFile(path.join(dir, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2) + '\n');
+  await writeFile(path.join(dir, 'sw.js'), sw);
 }
 
 if (watch) {

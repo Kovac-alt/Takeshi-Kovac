@@ -1,0 +1,4 @@
+.chart { min-width: 0; }
+.chart svg { display: block; width: 100%; touch-action: pan-y; }
+.chart text { font: 500 12px var(--font-display); fill: var(--chart-axis); }
+.chart .chart-tip { fill: var(--ink); font-size: 14px; font-weight: 600; }
