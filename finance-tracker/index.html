@@ -235,6 +235,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 0; width: 100%; }
   .filters { grid-template-columns: minmax(0, 1fr); }
   .brand { font-size: 1.3rem; }
 }
+@media (pointer: coarse) { input[type="text"], input[type="date"], input[type="search"], select { font-size: 16px; } } /* stops iOS zooming into focused fields */
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -266,7 +267,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 0; width: 100%; }
     <label class="field"><span>What was it? (optional)</span><input type="text" id="f-note" maxlength="80" autocomplete="off" placeholder="Rent, coffee, train ticket…"></label>
     <div class="pair">
       <label class="field"><span>Repeats</span><select id="f-repeat">
-        <option value="none">Does not repeat</option><option value="weekly">Every week</option>
+        <option value="none">Never</option><option value="weekly">Every week</option>
         <option value="biweekly">Every 2 weeks</option><option value="monthly">Every month</option><option value="yearly">Every year</option>
       </select></label>
       <label class="field" id="f-end-wrap" hidden><span>Ends (optional)</span><input type="date" id="f-end"></label>
@@ -551,7 +552,7 @@ function renderChip() {
   const m = Store.mode;
   if (Store.failed) el.outerHTML = '<button class="chip fail" id="chip" data-action="retry"><i></i>Not saved. Retry</button>';
   else if (m === 'cloud') el.outerHTML = `<span class="chip ${Store.writing.size ? 'busy' : ''}" id="chip"><i></i>${Store.writing.size ? 'Saving…' : 'Saved to your account'}</span>`;
-  else if (m === 'local') el.outerHTML = '<span class="chip local" id="chip" title="Entries are stored in this browser only"><i></i>Saved in this browser</span>';
+  else if (m === 'local') el.outerHTML = '<span class="chip local" id="chip" title="Entries are stored on this device only"><i></i>Saved on this device</span>';
   else if (m === 'error') el.outerHTML = '<span class="chip fail" id="chip"><i></i>Can’t reach your data</span>';
   else el.outerHTML = '<span class="chip busy" id="chip"><i></i>Loading…</span>';
 }
@@ -812,6 +813,10 @@ async function exportBackup() {
   try {
     const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
     if (dl) { await dl.save({ filename, data: text }); toast('Backup saved.'); return; }
+    if (window.self === window.top && navigator.canShare) { // phones: hand the file to the share sheet (Save to Files)
+      const file = new File([text], filename, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); } catch (e) { /* closed without saving */ } return; }
+    }
     if (window.self === window.top) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); return; }
     toast('Saving files is not available in this view.');
   } catch (e) { if (!e || e.code !== 'declined') toast('The backup could not be saved here.'); }
